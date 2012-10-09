@@ -10,11 +10,15 @@
 #define INSTART 7
 #define SIGNPIN 6
 #define TEMPPIN 13
+#define 
 
 #define PERIODS 1 // number of clock periods to average 
 
-void setup(){
-  delay(1000);
+#define PINQ 3
+#define PINQBAR 5
+int state;
+void setup() {
+delay(1000);
   Serial.begin(9600);
   pinMode(TEMPPIN,INPUT);
   for (int i=INSTART;i<INPUTS+INSTART;i++) {
@@ -24,7 +28,29 @@ void setup(){
   for (int i=3;i<7;i++ ) {
     pinMode(i,OUTPUT); 
   }
+pinMode(PINQ, OUTPUT);
+pinMode(PINQBAR, OUTPUT);
+state=HIGH;
+digitalWrite(PINQ,state);
+digitalWrite(PINQBAR,!state);
 }
+
+
+void PIDcontrol(int settemp,float temp) {
+  static long time=micros(); //test only initial conditionage
+  static float previous_error=settemp-temp; //test only initial conditionage
+  static float integral=0; //testr this only sets on initial initialisation
+  const float Kp,Ki,Kd;
+  const int dt;
+  while (micros()-time<dt) ;
+  time=micros;
+  error=setpoint-temp;
+  integral = integral+(error*dt);
+  derivative = (error - previous_error)/dt
+  output = (Kp*error) + (Ki*integral) + (Kd*derivative)
+  previous_error = error
+}
+
 
 // Reads and prints temperature to serial
 float handleTemp() {
@@ -72,9 +98,10 @@ void displayOutput(int value) {
     
 }
 void loop(){
-  int inputTemp=  readInput();
+  Serial.println("Temp");
+  //int inputTemp=  readInput();
   int temp= handleTemp();
-  displayOutput(inputTemp-round(temp));
+  //displayOutput(inputTemp-round(temp));
   //Serial.println(inputTemp-temp);
   delay(2000); // used to limit serial output
 }

@@ -13,8 +13,11 @@
 
 #define PERIODS 1 // number of clock periods to average 
 
-void setup(){
-  delay(1000);
+#define PINQ 3
+#define PINQBAR 5
+int state;
+void setup() {
+delay(1000);
   Serial.begin(9600);
   pinMode(TEMPPIN,INPUT);
   for (int i=INSTART;i<INPUTS+INSTART;i++) {
@@ -24,6 +27,11 @@ void setup(){
   for (int i=3;i<7;i++ ) {
     pinMode(i,OUTPUT); 
   }
+pinMode(PINQ, OUTPUT);
+pinMode(PINQBAR, OUTPUT);
+state=HIGH;
+digitalWrite(PINQ,state);
+digitalWrite(PINQBAR,!state);
 }
 
 // Reads and prints temperature to serial
@@ -72,9 +80,10 @@ void displayOutput(int value) {
     
 }
 void loop(){
-  int inputTemp=  readInput();
+  Serial.println("Temp");
+  //int inputTemp=  readInput();
   int temp= handleTemp();
-  displayOutput(inputTemp-round(temp));
+  //displayOutput(inputTemp-round(temp));
   //Serial.println(inputTemp-temp);
   delay(2000); // used to limit serial output
 }
