@@ -1,54 +1,69 @@
 #include <stdio.h>
+
+//PID defines
+#define DT 100000 //time in micros
+
 // defining various sensor circut constants
 #define CAPACITANCE (1e-6)
 #define RESISTOR1 (5e3)
 #define BETA (3988.0)
 #define RINF (10e3*exp(-BETA/298.15))
-#define CELCIUS_OFFSET 0
-//273.15
+#define CELCIUS_OFFSET 273.15
+
+//INPUT PINs 7,8,9,10,11,12
 #define INPUTS 6
 #define INSTART 7
-#define SIGNPIN 6
-#define TEMPPIN 13
-#define 
+#define TEMPPIN  0
 
-#define PERIODS 1 // number of clock periods to average 
+//OUTPUT PINS
+#define OUTPUTS  4
+#define SIGNPIN  13
+#define OUT_0    6
+#define OUT_1    4
+#define OUT_2    2
 
+// Pulse Width PINs for controlling Cooler
 #define PINQ 3
 #define PINQBAR 5
-int state;
+
+//OUTPUT array
+const int outputs[]={2,4,6,13};
+
+
 void setup() {
-delay(1000);
-  Serial.begin(9600);
+  delay(1000);
+  //Set output pins mode
+  for (int i=0;i<OUTPUTS;i++) {
+    pinMode(outputs[i],OUTPUT);
+  }
+  //Set input pins mode
   pinMode(TEMPPIN,INPUT);
   for (int i=INSTART;i<INPUTS+INSTART;i++) {
     pinMode(i,INPUT);
     digitalWrite(i,HIGH); //use internal pull-ups
   }
-  for (int i=3;i<7;i++ ) {
-    pinMode(i,OUTPUT); 
-  }
-pinMode(PINQ, OUTPUT);
-pinMode(PINQBAR, OUTPUT);
-state=HIGH;
-digitalWrite(PINQ,state);
-digitalWrite(PINQBAR,!state);
+  analogWrite(PINQ,0);
+  analogWrite(PINQBAR,0);
 }
 
 
-void PIDcontrol(int settemp,float temp) {
-  static long time=micros(); //test only initial conditionage
-  static float previous_error=settemp-temp; //test only initial conditionage
-  static float integral=0; //testr this only sets on initial initialisation
-  const float Kp,Ki,Kd;
-  const int dt;
+float PIDcontrol(int settemp,float temp) {
+  static long time=micros();
+  static float previous_error=settemp-temp;
+  static float integral=0;
+  const float Kp=0,Ki=0,Kd=0;
+  const int dt=DT;
+  float derivative;
+  float error;
+  float output;
   while (micros()-time<dt) ;
-  time=micros;
-  error=setpoint-temp;
+  time=micros();
+  error=settemp-temp;
   integral = integral+(error*dt);
-  derivative = (error - previous_error)/dt
-  output = (Kp*error) + (Ki*integral) + (Kd*derivative)
-  previous_error = error
+  derivative = (error - previous_error)/dt;
+  output = (Kp*error) + (Ki*integral) + (Kd*derivative);
+  previous_error = error;
+  return output>255?255:(output<-255?-255:output);
 }
 
 
@@ -60,23 +75,19 @@ float handleTemp() {
   float period;
   int i;
 
-  // read average period
+  // read period
   while(digitalRead(TEMPPIN)==HIGH) {}; 
   while(digitalRead(TEMPPIN)==LOW ) {};
   t = micros();
-
-  for (i=0;i<PERIODS;i++) {
-    while(digitalRead(TEMPPIN)==HIGH) {};
-    while(digitalRead(TEMPPIN)==LOW ) {};
-  }
-
+  while(digitalRead(TEMPPIN)==HIGH) {};
+  while(digitalRead(TEMPPIN)==LOW ) {};
   t = micros()-t;
-  period = t/PERIODS*1e-6; //converts to average and from (microsec) to (sec)
+  period = t*1e-6; //converts to average and from (microsec) to (sec)
   Rt = (period)/(2.0*log(2.0)*CAPACITANCE)-RESISTOR1/2.0;
-  //Serial.println(Rt);
+
   temp = BETA/log(Rt/RINF) - CELCIUS_OFFSET ;
 
-  Serial.println(temp,2);
+//  Serial.println(temp,2); //Debug print temp
   return temp;
 }
 
@@ -92,16 +103,22 @@ void displayOutput(int value) {
   digitalWrite(SIGNPIN,value<0?HIGH:LOW);
   value=abs(value);
   if (value>7) value=7;
-  for (int i=3;i<6;i++) {
-    digitalWrite(i,(value&(1<<(i-3))?HIGH:LOW));
+  for (int i=0;i<OUTPUTS;i++) {
+    digitalWrite(outputs[i],(value&(1<<(i-3))?HIGH:LOW));
   }
     
 }
 void loop(){
-  Serial.println("Temp");
-  //int inputTemp=  readInput();
-  int temp= handleTemp();
-  //displayOutput(inputTemp-round(temp));
-  //Serial.println(inputTemp-temp);
-  delay(2000); // used to limit serial output
+  int level;
+  int inputTemp=readInput();
+  float temp=handleTemp();
+  displayOutput(inputTemp-round(temp));
+  level=(int)PIDcontrol(inputTemp,temp);
+  if (level<0) {
+    analogWrite(PINQBAR,-1*level);
+    analogWrite(PINQ,0);
+  } else {
+    analogWrite(PINQ,level);
+    analogWrite(PINQBAR,0);
+  }
 }
