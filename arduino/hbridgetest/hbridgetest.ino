@@ -1,5 +1,5 @@
-#define PINQ 3
-#define PINQBAR 5
+#define PINQ 11
+#define PINQBAR 10
 int state;
 void setup() {
 

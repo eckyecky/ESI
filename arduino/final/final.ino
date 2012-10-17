@@ -2,6 +2,9 @@
 
 //PID defines
 #define DT 100000 //time in micros
+#define KP_CONST  (255.0/7.0)
+#define KI_CONST  (255.0/10.0)
+#define KD_CONST  0
 
 // defining various sensor circut constants
 #define CAPACITANCE (1e-6)
@@ -12,26 +15,30 @@
 
 //INPUT PINs 7,8,9,10,11,12
 #define INPUTS 6
-#define INSTART 7
+#define INSTART 2
 #define TEMPPIN  0
 
 //OUTPUT PINS
 #define OUTPUTS  4
-#define SIGNPIN  13
+#define SIGNPIN  8
 #define OUT_0    6
 #define OUT_1    4
 #define OUT_2    2
 
 // Pulse Width PINs for controlling Cooler
-#define PINQ 3
-#define PINQBAR 5
+#define PINQ 11
+#define PINQBAR 10
+
+#define DEBUG_TEMP 37
+
 
 //OUTPUT array
-const int outputs[]={2,4,6,13};
+const int outputs[]={8,9,12,13};
 
 
 void setup() {
   delay(1000);
+  Serial.begin(9600);
   //Set output pins mode
   for (int i=0;i<OUTPUTS;i++) {
     pinMode(outputs[i],OUTPUT);
@@ -51,12 +58,12 @@ float PIDcontrol(int settemp,float temp) {
   static long time=micros();
   static float previous_error=settemp-temp;
   static float integral=0;
-  const float Kp=0,Ki=0,Kd=0;
-  const int dt=DT;
+  const float Kp=KP_CONST,Ki=KI_CONST,Kd=KD_CONST;
+  const long dt=DT;
   float derivative;
   float error;
   float output;
-  while (micros()-time<dt) ;
+  while (micros()-time<dt);
   time=micros();
   error=settemp-temp;
   integral = integral+(error*dt);
@@ -86,8 +93,9 @@ float handleTemp() {
   Rt = (period)/(2.0*log(2.0)*CAPACITANCE)-RESISTOR1/2.0;
 
   temp = BETA/log(Rt/RINF) - CELCIUS_OFFSET ;
-
-//  Serial.println(temp,2); //Debug print temp
+  Serial.print("measured = ");
+  Serial.println(temp,2); //Debug print temp
+  temp+= temp*0.2006-6.8166;      //Statistical Error fix
   return temp;
 }
 
@@ -103,17 +111,22 @@ void displayOutput(int value) {
   digitalWrite(SIGNPIN,value<0?HIGH:LOW);
   value=abs(value);
   if (value>7) value=7;
-  for (int i=0;i<OUTPUTS;i++) {
-    digitalWrite(outputs[i],(value&(1<<(i-3))?HIGH:LOW));
-  }
-    
+  digitalWrite(outputs[1],(value&(1<<2)?HIGH:LOW));
+  digitalWrite(outputs[2],(value&(1<<1)?HIGH:LOW));
+  digitalWrite(outputs[3],(value&(1<<0)?HIGH:LOW));  
 }
 void loop(){
   int level;
   int inputTemp=readInput();
+  //int inputTemp=DEBUG_TEMP;
   float temp=handleTemp();
+  //Serial.println(inputTemp);
   displayOutput(inputTemp-round(temp));
   level=(int)PIDcontrol(inputTemp,temp);
+  Serial.print("PID = ");
+  Serial.println(level);
+  Serial.print("Real = ");
+  Serial.println(temp);
   if (level<0) {
     analogWrite(PINQBAR,-1*level);
     analogWrite(PINQ,0);
