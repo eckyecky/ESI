@@ -13,17 +13,14 @@
 #define RINF (10e3*exp(-BETA/298.15))
 #define CELCIUS_OFFSET 273.15
 
-//INPUT PINs 7,8,9,10,11,12
+//INPUT PINs 2, 3, 4, 5, 6, 7
 #define INPUTS 6
 #define INSTART 2
-#define TEMPPIN  0
+#define TEMPPIN  1
 
 //OUTPUT PINS
 #define OUTPUTS  4
 #define SIGNPIN  8
-#define OUT_0    6
-#define OUT_1    4
-#define OUT_2    2
 
 // Pulse Width PINs for controlling Cooler
 #define PINQ 11
